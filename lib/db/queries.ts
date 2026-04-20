@@ -1,5 +1,5 @@
 import { db, schema } from './client'
-import { eq, inArray } from 'drizzle-orm'
+import { and, eq, inArray, sql } from 'drizzle-orm'
 
 export async function getEnabledSources() {
   return db.select().from(schema.sources).where(eq(schema.sources.enabled, true))
@@ -50,4 +50,36 @@ export async function recordCronRun(input: {
     status: input.status,
     finishedAt: new Date(),
   })
+}
+
+export async function getPendingArticles(limit = 20) {
+  return db.select()
+    .from(schema.articles)
+    .where(and(eq(schema.articles.enrichmentStatus, 'pending'), sql`${schema.articles.enrichmentAttempts} < 3`))
+    .orderBy(sql`${schema.articles.publishedAt} desc nulls last`)
+    .limit(limit)
+}
+
+export async function updateArticleEnriched(id: string, data: {
+  fullText: string
+  aiSummary: string | null
+  matchedEntities: string[]
+  matchedKeywords: string[]
+}) {
+  await db.update(schema.articles).set({
+    fullText: data.fullText,
+    aiSummary: data.aiSummary,
+    matchedEntities: data.matchedEntities,
+    matchedKeywords: data.matchedKeywords,
+    enrichmentStatus: 'done',
+    enrichmentError: null,
+  }).where(eq(schema.articles.id, id))
+}
+
+export async function bumpArticleFailure(id: string, error: string) {
+  await db.update(schema.articles).set({
+    enrichmentAttempts: sql`${schema.articles.enrichmentAttempts} + 1`,
+    enrichmentError: error,
+    enrichmentStatus: sql`case when ${schema.articles.enrichmentAttempts} + 1 >= 3 then 'failed'::enrichment_status else 'pending'::enrichment_status end`,
+  }).where(eq(schema.articles.id, id))
 }
