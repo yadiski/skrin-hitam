@@ -1,9 +1,27 @@
 import { db, schema } from '@/lib/db/client'
 import { eq } from 'drizzle-orm'
 import { canonicalizeUrl } from '@/lib/canonical'
-import { extractArticle } from '@/lib/extractor'
 import { matchText, type MatcherEntity } from '@/lib/matcher'
 import { summarize } from '@/lib/summarizer'
+
+// WP-JSON payloads return already-clean HTML (no nav/ads/footer), so heavy
+// extraction (jsdom + Readability) is unnecessary here. A regex-based strip
+// is enough to feed the matcher and gives us a rough body for search/display.
+// The enrich cron can later refresh full_text with real extraction from the
+// canonical URL if higher fidelity is ever needed.
+const BASIC_ENTITIES: Record<string, string> = {
+  '&amp;': '&', '&lt;': '<', '&gt;': '>', '&quot;': '"', '&#39;': "'",
+  '&nbsp;': ' ', '&ndash;': '-', '&mdash;': '—', '&hellip;': '…',
+}
+function htmlToText(html: string): string {
+  return html
+    .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+    .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&[a-z#0-9]+;/gi, (m) => BASIC_ENTITIES[m.toLowerCase()] ?? ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
 
 export type WpJsonAdapter = {
   sourceId: string
@@ -57,12 +75,8 @@ export async function processWpJsonPost(
 
   const rawHtml = post.content?.rendered ?? ''
   const titleHtml = post.title?.rendered ?? ''
-  const extracted = extractArticle(
-    `<html><body><article><h1>${titleHtml}</h1>${rawHtml}</article></body></html>`,
-    canonical,
-  )
-  const text = extracted.text || rawHtml.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
-  const title = titleHtml.replace(/<[^>]+>/g, '').trim()
+  const text = htmlToText(rawHtml)
+  const title = htmlToText(titleHtml)
   if (!title || text.length < 100) return 'skipped'
 
   const result = matchText(`${title}\n${text}`, entities)
