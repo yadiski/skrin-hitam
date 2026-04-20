@@ -2,41 +2,44 @@ export const dynamic = 'force-dynamic'
 export const revalidate = 0
 
 import { db, schema } from '@/lib/db/client'
-import { asc, eq, gte, lte, sql, type SQL } from 'drizzle-orm'
-import { DeckColumn } from './_components/deck-column'
-import { FilterBar } from './_components/filter-bar'
+import { asc, eq, sql } from 'drizzle-orm'
+import { DeckLayout } from './_components/deck-layout'
+import {
+  countColumnArticles,
+  fetchColumnArticles,
+  type Filter,
+  type SortMode,
+} from '@/lib/articles-query'
 
-type Search = {
-  entity?: string
-  source?: string
-  q?: string
-  kw?: string
-  from?: string
-  to?: string
-  sort?: string
-}
+type Search = Record<string, string | undefined>
 
-type SortMode = 'newest' | 'oldest' | 'relevance'
 const VALID_SORTS: SortMode[] = ['newest', 'oldest', 'relevance']
+const GLOBAL_FIELDS = new Set(['source', 'q', 'kw', 'from', 'to', 'sort', 'cols', 'entity', 'page'])
+const COLUMN_FIELDS = new Set<keyof Filter>(['source', 'q', 'kw', 'from', 'to'])
+const INITIAL_LIMIT = 50
 
 export default async function Home({ searchParams }: { searchParams: Promise<Search> }) {
   const params = await searchParams
   const sort: SortMode = VALID_SORTS.includes(params.sort as SortMode) ? (params.sort as SortMode) : 'newest'
 
-  const conditions: SQL[] = [eq(schema.articles.falsePositive, false)]
-  if (params.source) conditions.push(eq(schema.articles.sourceId, params.source))
-  if (params.q) conditions.push(sql`${schema.articles.searchTsv} @@ plainto_tsquery('simple', ${params.q})`)
-  if (params.kw) conditions.push(sql`${schema.articles.matchedKeywords} @> ARRAY[${params.kw.toLowerCase()}]::text[]`)
-  if (params.from) {
-    const fromDate = new Date(params.from)
-    if (!isNaN(fromDate.getTime())) conditions.push(gte(schema.articles.publishedAt, fromDate))
+  const globalFilter: Filter = {
+    source: params.source,
+    q: params.q,
+    kw: params.kw,
+    from: params.from,
+    to: params.to,
   }
-  if (params.to) {
-    const toDate = new Date(params.to)
-    if (!isNaN(toDate.getTime())) {
-      toDate.setUTCHours(23, 59, 59, 999)
-      conditions.push(lte(schema.articles.publishedAt, toDate))
-    }
+
+  // Parse per-column filters from URL keys like "<slug>.source".
+  const columnFilters: Record<string, Filter> = {}
+  for (const [key, val] of Object.entries(params)) {
+    if (!val || GLOBAL_FIELDS.has(key)) continue
+    const idx = key.indexOf('.')
+    if (idx < 0) continue
+    const slug = key.slice(0, idx)
+    const field = key.slice(idx + 1) as keyof Filter
+    if (!COLUMN_FIELDS.has(field)) continue
+    columnFilters[slug] = { ...(columnFilters[slug] ?? {}), [field]: val }
   }
 
   const [entities, sources, keywordsRes] = await Promise.all([
@@ -51,54 +54,51 @@ export default async function Home({ searchParams }: { searchParams: Promise<Sea
     `),
   ])
 
-  const sourceMap = new Map(sources.map((s) => [s.id, { id: s.id, name: s.name }]))
+  // Visible order: ?entity= overrides, else ?cols=, else all entities.
+  const focusMode = Boolean(params.entity)
+  let defaultVisibleSlugs: string[]
+  if (focusMode) {
+    defaultVisibleSlugs = [params.entity!]
+  } else if (params.cols) {
+    const requested = params.cols.split(',').map((s) => s.trim()).filter(Boolean)
+    defaultVisibleSlugs = requested.filter((s) => entities.some((e) => e.slug === s))
+  } else {
+    defaultVisibleSlugs = entities.map((e) => e.slug)
+  }
+
+  const visibleEntities = defaultVisibleSlugs
+    .map((s) => entities.find((e) => e.slug === s))
+    .filter((e): e is typeof entities[number] => e !== undefined)
+
+  const initialData = await Promise.all(
+    visibleEntities.map(async (e) => {
+      const colFilter = columnFilters[e.slug] ?? {}
+      const [articles, total] = await Promise.all([
+        fetchColumnArticles(e.slug, globalFilter, colFilter, sort, 0, INITIAL_LIMIT),
+        countColumnArticles(e.slug, globalFilter, colFilter),
+      ])
+      return { slug: e.slug, articles, total }
+    })
+  )
+
+  const sourceMap = Object.fromEntries(sources.map((s) => [s.id, { id: s.id, name: s.name }]))
   const entityColors = Object.fromEntries(entities.map((e) => [e.slug, e.color]))
   const entityNames = Object.fromEntries(entities.map((e) => [e.slug, e.name]))
-  const keywords = keywordsRes.rows.map((r) => ({ kw: r.kw, count: r.count }))
-
-  // Focus mode: ?entity=slug collapses the deck to that single column.
-  const displayEntities = params.entity
-    ? entities.filter((e) => e.slug === params.entity)
-    : entities
 
   return (
-    <div className="h-screen flex flex-col">
-      <header className="flex-shrink-0 border-b border-neutral-800 px-4 py-3 flex items-center gap-4 flex-wrap">
-        <div>
-          <h1 className="text-lg font-semibold leading-none">MUDA News Monitor</h1>
-          <p className="text-[11px] text-neutral-500 mt-1 leading-none">Tracking Parti MUDA coverage across Malaysian media</p>
-        </div>
-        <div className="flex-1" />
-        {params.entity && (
-          <a href="/" className="text-xs px-2 py-1 bg-neutral-800 text-neutral-300 rounded hover:bg-neutral-700">
-            ← All columns
-          </a>
-        )}
-      </header>
-      <div className="flex-shrink-0 border-b border-neutral-800 px-4 py-2.5">
-        <FilterBar sources={sources.map((s) => ({ id: s.id, name: s.name }))} keywords={keywords} />
-      </div>
-      <div className="flex-1 overflow-x-auto overflow-y-hidden">
-        <div className="h-full flex gap-3 p-3" style={{ scrollSnapType: 'x proximity' }}>
-          {displayEntities.length === 0 ? (
-            <div className="m-auto text-center text-neutral-500 text-sm">
-              No entities found. Visit <a href="/admin/entities" className="text-orange-400 hover:underline">/admin/entities</a> to add one.
-            </div>
-          ) : (
-            displayEntities.map((e) => (
-              <DeckColumn
-                key={e.slug}
-                entity={{ slug: e.slug, name: e.name, color: e.color, kind: e.kind }}
-                conditions={conditions}
-                sort={sort}
-                sourceMap={sourceMap}
-                entityColors={entityColors}
-                entityNames={entityNames}
-              />
-            ))
-          )}
-        </div>
-      </div>
-    </div>
+    <DeckLayout
+      allEntities={entities.map((e) => ({ slug: e.slug, name: e.name, color: e.color, kind: e.kind }))}
+      defaultVisibleSlugs={defaultVisibleSlugs}
+      columnFilters={columnFilters}
+      globalFilter={globalFilter}
+      sort={sort}
+      initialData={initialData}
+      sources={sources.map((s) => ({ id: s.id, name: s.name }))}
+      sourceMap={sourceMap}
+      keywords={keywordsRes.rows.map((r) => ({ kw: r.kw, count: r.count }))}
+      entityColors={entityColors}
+      entityNames={entityNames}
+      focusMode={focusMode}
+    />
   )
 }

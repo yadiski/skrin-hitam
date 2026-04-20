@@ -1,3 +1,4 @@
+'use client'
 import Link from 'next/link'
 import dayjs from 'dayjs'
 import relativeTime from 'dayjs/plugin/relativeTime'
@@ -8,7 +9,7 @@ type Props = {
   url: string
   title: string
   sourceName: string
-  publishedAt: Date | null
+  publishedAt: Date | string | null
   aiSummary: string | null
   snippet: string | null
   matchedEntities: string[]
@@ -20,12 +21,13 @@ type Props = {
 
 export function DeckCard(p: Props) {
   const otherEntities = p.matchedEntities.filter((e) => e !== p.primaryEntity)
+  const published = p.publishedAt ? new Date(p.publishedAt) : null
   return (
     <article className="border-b border-neutral-800 px-3 py-2.5 hover:bg-neutral-900/50 transition-colors">
       <div className="flex items-center gap-1.5 mb-1 text-[10px] text-neutral-500 leading-none">
         <span className="px-1.5 py-0.5 rounded bg-neutral-800 text-neutral-300">{p.sourceName}</span>
         <span aria-hidden>·</span>
-        <span>{p.publishedAt ? dayjs(p.publishedAt).fromNow() : 'unknown'}</span>
+        <span>{published ? dayjs(published).fromNow() : 'unknown'}</span>
       </div>
       <h3 className="text-sm font-semibold leading-snug mb-1 text-neutral-100">
         <a href={p.url} target="_blank" rel="noopener noreferrer" className="hover:underline">{p.title}</a>
