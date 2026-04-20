@@ -1,0 +1,27 @@
+name: CI
+
+on:
+  pull_request:
+  push: { branches: [main] }
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: ${{ secrets.TEST_DATABASE_URL }}
+      ANTHROPIC_API_KEY: not-used-in-tests
+      ADMIN_COOKIE_SECRET: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+      ADMIN_PASSWORD: test
+      CRON_SECRET: test-secret
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '20', cache: 'npm' }
+      - run: npm ci
+      - name: Run migrations (if TEST_DATABASE_URL is set)
+        if: env.DATABASE_URL != ''
+        run: npx drizzle-kit push
+      - run: npm test
+      - run: npm run build
+        env:
+          DATABASE_URL: ${{ secrets.TEST_DATABASE_URL || 'postgres://placeholder:pass@localhost:5432/placeholder' }}
