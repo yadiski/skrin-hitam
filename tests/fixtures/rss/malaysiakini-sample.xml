@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+<channel>
+  <title>Malaysiakini</title>
+  <link>https://www.malaysiakini.com</link>
+  <description>Malaysian news</description>
+  <item>
+    <title>Parti MUDA launches new election push</title>
+    <link>https://www.malaysiakini.com/news/100001</link>
+    <description>Parti MUDA today announced...</description>
+    <pubDate>Mon, 20 Apr 2026 10:00:00 +0800</pubDate>
+    <guid>https://www.malaysiakini.com/news/100001</guid>
+  </item>
+  <item>
+    <title>Economy in focus</title>
+    <link>https://www.malaysiakini.com/news/100002</link>
+    <description>Unrelated article</description>
+    <pubDate>Mon, 20 Apr 2026 09:00:00 +0800</pubDate>
+    <guid>https://www.malaysiakini.com/news/100002</guid>
+  </item>
+</channel>
+</rss>
