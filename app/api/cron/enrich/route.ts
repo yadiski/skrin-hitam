@@ -11,7 +11,7 @@ import {
 export const runtime = 'nodejs'
 export const maxDuration = 800
 
-const USER_AGENT = 'MudaNewsMonitorBot/1.0 (+https://muda-news-monitor.vercel.app)'
+const USER_AGENT = 'SkrinHitamBot/1.0 (+https://skrin-hitam.vercel.app)'
 
 function authorize(req: Request) {
   const secret = process.env.CRON_SECRET

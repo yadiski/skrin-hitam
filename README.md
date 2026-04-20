@@ -1,6 +1,6 @@
-# MUDA News Monitor
+# Skrin Hitam — by Payong Legam Malaysia
 
-Monitors Malaysian news outlets for coverage of Parti MUDA in general and figures like Luqman Long specifically. Displays matches on a public dashboard with a password-gated admin UI for managing tracked entities.
+Malaysian political news monitor. Tracks coverage across multiple outlets for a configurable set of entities (Parti MUDA, Tangkap Azam Baki movement, etc.) and displays matches on a public multi-column dashboard with a password-gated admin UI for managing tracked entities.
 
 ## Setup
 

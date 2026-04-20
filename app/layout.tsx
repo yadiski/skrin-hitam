@@ -2,8 +2,8 @@ import './globals.css'
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
-  title: 'MUDA News Monitor',
-  description: 'Tracking Parti MUDA news coverage across Malaysian media.',
+  title: 'Skrin Hitam by Payong Legam Malaysia',
+  description: 'Malaysian political news monitor — coverage tracking across multiple outlets.',
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

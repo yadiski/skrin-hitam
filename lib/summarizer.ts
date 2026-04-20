@@ -20,7 +20,7 @@ export async function summarize(input: { title: string; body: string }): Promise
       'content-type': 'application/json',
       authorization: `Bearer ${apiKey}`,
       'HTTP-Referer': 'https://github.com/yadiski/skrin-hitam',
-      'X-Title': 'MUDA News Monitor',
+      'X-Title': 'Skrin Hitam by Payong Legam Malaysia',
     },
     body: JSON.stringify({
       model: MODEL,

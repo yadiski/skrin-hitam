@@ -6,7 +6,7 @@ import { matchText, type MatcherEntity } from '@/lib/matcher'
 import { summarize } from '@/lib/summarizer'
 import { eq } from 'drizzle-orm'
 
-const USER_AGENT = 'MudaNewsMonitorBot/1.0 (+https://skrin-hitam.vercel.app)'
+const USER_AGENT = 'SkrinHitamBot/1.0 (+https://skrin-hitam.vercel.app)'
 const DELAY_MS = 600  // polite pause between REST API calls
 
 type WpPost = {

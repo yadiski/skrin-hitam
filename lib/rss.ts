@@ -14,7 +14,7 @@ export type FetchFeedResult =
   | { status: 'error'; error: string }
 
 const parser = new Parser({ timeout: 10_000 })
-const USER_AGENT = 'MudaNewsMonitorBot/1.0 (+https://muda-news-monitor.vercel.app)'
+const USER_AGENT = 'SkrinHitamBot/1.0 (+https://skrin-hitam.vercel.app)'
 
 export async function fetchFeed(
   url: string,

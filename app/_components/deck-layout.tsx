@@ -112,8 +112,8 @@ export function DeckLayout(p: Props) {
     <div className="h-screen flex flex-col">
       <header className="flex-shrink-0 border-b border-neutral-800 px-4 py-3 flex items-center gap-3 flex-wrap">
         <div>
-          <h1 className="text-lg font-semibold leading-none">MUDA News Monitor</h1>
-          <p className="text-[11px] text-neutral-500 mt-1 leading-none">Tracking Parti MUDA coverage across Malaysian media</p>
+          <h1 className="text-lg font-semibold leading-none">Skrin Hitam <span className="text-neutral-500 font-normal">by Payong Legam Malaysia</span></h1>
+          <p className="text-[11px] text-neutral-500 mt-1 leading-none">Malaysian political news monitor</p>
         </div>
         <div className="flex-1" />
         {!p.focusMode && (
