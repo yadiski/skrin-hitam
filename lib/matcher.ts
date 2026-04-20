@@ -12,7 +12,10 @@ export type MatchResult = {
 }
 
 const HONORIFICS = [
-  "dato'", 'dato', 'datuk', 'datin', 'tan sri', 'puan sri',
+  "dato'", 'dato',
+  'datuk seri', 'datuk sri', 'datuk',
+  'datin', 'tan sri', 'puan sri',
+  'tun',
   'yb', 'yab', 'ybhg', 'tuan', 'puan', 'encik', 'sdr', 'sdri',
 ]
 
@@ -21,7 +24,11 @@ function escapeRegex(s: string): string {
 }
 
 function normalize(text: string): string {
-  let t = text.toLowerCase().replace(/\s+/g, ' ').trim()
+  let t = text
+    .replace(/[\u2018\u2019\u02BC]/g, "'")
+    .toLowerCase()
+    .replace(/\s+/g, ' ')
+    .trim()
   for (const h of HONORIFICS) {
     const re = new RegExp(`(^|\\s)${escapeRegex(h)}(?=\\s)`, 'g')
     t = t.replace(re, '$1')

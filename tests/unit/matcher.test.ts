@@ -66,6 +66,21 @@ describe('matchText — tag with require_any (context gate)', () => {
     expect(r.scope).toEqual(['muda'])
     expect(r.tag).toEqual([])
   })
+
+  test('strips Unicode right-quote Dato\u2019', () => {
+    const r = matchText('Dato\u2019 Luqman Long attends Parti MUDA AGM', [MUDA, LUQMAN])
+    expect(r.tag).toEqual(['luqman-long'])
+  })
+
+  test('strips Datuk Seri compound honorific', () => {
+    const r = matchText('Datuk Seri Luqman Long speaks at MUDA', [MUDA, LUQMAN])
+    expect(r.tag).toEqual(['luqman-long'])
+  })
+
+  test('strips Tun honorific', () => {
+    const r = matchText('Tun Luqman Long visits Parti MUDA', [MUDA, LUQMAN])
+    expect(r.tag).toEqual(['luqman-long'])
+  })
 })
 
 describe('matchText — utilities', () => {
