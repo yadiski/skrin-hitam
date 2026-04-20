@@ -3,11 +3,9 @@ import { db, schema } from '@/lib/db/client'
 import { eq } from 'drizzle-orm'
 import { matchText, type MatcherEntity } from '@/lib/matcher'
 
-// Comprehensive keyword set for the MUDA scope entity — expand to catch any
-// article "deeply related to Parti MUDA" without matching the bare Malay
-// adjective "muda" (= young), which would flood the dashboard with false hits.
+// ─── Parti MUDA scope ────────────────────────────────────────────────────────
 const MUDA_SCOPE_KEYWORDS = [
-  // Party-name variants (Malay + English + full name)
+  // Party-name variants
   'parti muda',
   'muda party',
   'malaysian united democratic alliance',
@@ -55,12 +53,72 @@ const MUDA_SCOPE_KEYWORDS = [
   'muda rally',
   'perhimpunan muda',
 
-  // Key figures (names unique enough to identify MUDA coverage even when
-  // the party name isn't spelled out in the paragraph the keyword hits)
+  // Key figures
   'syed saddiq',
   'syed saddiq syed abdul rahman',
   'amira aisya',
   'luqman long',
+]
+
+// ─── Tangkap Azam Baki scope ─────────────────────────────────────────────────
+// Broad civic-movement coverage: the figure (Azam Baki), the agency (SPRM/MACC),
+// the protest slogan, and the named organisers/coalitions.
+const AAB_SCOPE_KEYWORDS = [
+  // The figure
+  'azam baki',
+  'tan sri azam baki',
+
+  // The slogan / protest
+  'tangkap azam baki',
+  'gerakan tangkap azam baki',
+  'protest azam baki',
+  'himpunan tangkap azam baki',
+  'rally azam baki',
+
+  // The agency
+  'sprm',
+  'suruhanjaya pencegahan rasuah malaysia',
+  'malaysian anti-corruption commission',
+  'macc chief',
+  'ketua pesuruhjaya sprm',
+  'ketua pesuruhjaya macc',
+
+  // Organiser orgs and coalitions
+  'mandiri',
+  'liga rakyat demokratik',
+  'liga mahasiswa demokratik',
+  'bersih 2.0',
+  'coalition bersih',
+  'gabungan pilihan raya bersih',
+  'bersih coalition',
+  'bersih protest',
+  'perhimpunan bersih',
+
+  // Related corruption-topic anchors that co-occur in coverage
+  'share trading allegation',
+  'azam baki saham',
+  'azam baki shares',
+  'azam baki declaration',
+  'acc watchdog',
+]
+
+const SCOPE_ENTITIES = [
+  {
+    slug: 'muda',
+    name: 'Parti MUDA',
+    keywords: MUDA_SCOPE_KEYWORDS,
+    requireAny: [] as string[],
+    kind: 'scope' as const,
+    color: '#f97316',
+  },
+  {
+    slug: 'tangkap-azam-baki',
+    name: 'Tangkap Azam Baki',
+    keywords: AAB_SCOPE_KEYWORDS,
+    requireAny: [] as string[],
+    kind: 'scope' as const,
+    color: '#ef4444',
+  },
 ]
 
 const TAG_ENTITIES = [
@@ -68,7 +126,7 @@ const TAG_ENTITIES = [
     slug: 'luqman-long',
     name: 'Luqman Long',
     keywords: ['luqman long', 'luqman bin long', 'lokman long'],
-    requireAny: [] as string[],  // name is specific enough; no context gate needed
+    requireAny: [] as string[],
     kind: 'tag' as const,
     color: '#3b82f6',
   },
@@ -88,39 +146,58 @@ const TAG_ENTITIES = [
     kind: 'tag' as const,
     color: '#a855f7',
   },
+  {
+    slug: 'azam-baki',
+    name: 'Azam Baki',
+    keywords: ['azam baki', 'tan sri azam baki'],
+    requireAny: [] as string[],
+    kind: 'tag' as const,
+    color: '#f59e0b',
+  },
+  {
+    slug: 'bersih',
+    name: 'Bersih',
+    keywords: ['bersih 2.0', 'coalition bersih', 'gabungan pilihan raya bersih', 'bersih coalition'],
+    requireAny: [] as string[],
+    kind: 'tag' as const,
+    color: '#eab308',
+  },
 ]
 
 async function main() {
-  // Upsert MUDA scope entity
-  await db.update(schema.trackedEntities)
-    .set({
-      keywords: MUDA_SCOPE_KEYWORDS,
-      requireAny: [],
-      name: 'Parti MUDA',
-      color: '#f97316',
-      enabled: true,
-      updatedAt: new Date(),
-    })
-    .where(eq(schema.trackedEntities.slug, 'muda'))
-  console.log('Updated muda scope →', MUDA_SCOPE_KEYWORDS.length, 'keywords')
-
-  // Upsert each tag entity (insert if missing, update if present)
-  for (const tag of TAG_ENTITIES) {
-    await db.insert(schema.trackedEntities).values(tag).onConflictDoUpdate({
+  // Upsert scope entities
+  for (const s of SCOPE_ENTITIES) {
+    await db.insert(schema.trackedEntities).values(s).onConflictDoUpdate({
       target: schema.trackedEntities.slug,
       set: {
-        name: tag.name,
-        keywords: tag.keywords,
-        requireAny: tag.requireAny,
-        color: tag.color,
+        name: s.name,
+        keywords: s.keywords,
+        requireAny: s.requireAny,
+        color: s.color,
         enabled: true,
         updatedAt: new Date(),
       },
     })
-    console.log(`Upserted tag: ${tag.slug} (${tag.keywords.length} keywords, requireAny=${tag.requireAny.length})`)
+    console.log(`Upserted scope: ${s.slug} (${s.keywords.length} keywords)`)
   }
 
-  // Re-match all articles against updated entities
+  // Upsert tag entities
+  for (const t of TAG_ENTITIES) {
+    await db.insert(schema.trackedEntities).values(t).onConflictDoUpdate({
+      target: schema.trackedEntities.slug,
+      set: {
+        name: t.name,
+        keywords: t.keywords,
+        requireAny: t.requireAny,
+        color: t.color,
+        enabled: true,
+        updatedAt: new Date(),
+      },
+    })
+    console.log(`Upserted tag: ${t.slug} (${t.keywords.length} keywords)`)
+  }
+
+  // Re-match all existing articles against the updated entity set.
   const entitiesDb = await db.select().from(schema.trackedEntities).where(eq(schema.trackedEntities.enabled, true))
   const entities: MatcherEntity[] = entitiesDb.map((e) => ({
     slug: e.slug, keywords: e.keywords, requireAny: e.requireAny, kind: e.kind,
@@ -160,7 +237,7 @@ async function main() {
   console.log(`  kept=${kept} dropped=${dropped}`)
   console.log(`  by entity:`)
   for (const [slug, count] of [...tagCounts.entries()].sort((a, b) => b[1] - a[1])) {
-    console.log(`    ${slug.padEnd(16)} ${count}`)
+    console.log(`    ${slug.padEnd(20)} ${count}`)
   }
 }
 main().then(() => process.exit(0)).catch((e) => { console.error(e); process.exit(1) })

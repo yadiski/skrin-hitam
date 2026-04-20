@@ -7,6 +7,7 @@ export type ArticleRow = {
   title: string
   sourceId: string
   publishedAt: Date | null
+  discoveredAt: Date
   aiSummary: string | null
   snippet: string | null
   matchedEntities: string[]
@@ -79,6 +80,7 @@ export async function fetchColumnArticles(
     title: schema.articles.title,
     sourceId: schema.articles.sourceId,
     publishedAt: schema.articles.publishedAt,
+    discoveredAt: schema.articles.discoveredAt,
     aiSummary: schema.articles.aiSummary,
     snippet: schema.articles.snippet,
     matchedEntities: schema.articles.matchedEntities,
@@ -90,6 +92,49 @@ export async function fetchColumnArticles(
     .offset(offset)
     .limit(limit)
   return rows as ArticleRow[]
+}
+
+/** Articles discovered after `sinceIso`, ordered by discoveredAt desc — used by the "N new" pill. */
+export async function fetchArticlesSince(
+  entitySlug: string,
+  global: Filter,
+  column: Filter,
+  sinceIso: string,
+  limit: number,
+): Promise<ArticleRow[]> {
+  const conditions = buildColumnConditions(entitySlug, global, column)
+  conditions.push(sql`${schema.articles.discoveredAt} > ${new Date(sinceIso)}`)
+  const rows = await db.select({
+    id: schema.articles.id,
+    url: schema.articles.url,
+    title: schema.articles.title,
+    sourceId: schema.articles.sourceId,
+    publishedAt: schema.articles.publishedAt,
+    discoveredAt: schema.articles.discoveredAt,
+    aiSummary: schema.articles.aiSummary,
+    snippet: schema.articles.snippet,
+    matchedEntities: schema.articles.matchedEntities,
+    enrichmentStatus: schema.articles.enrichmentStatus,
+  })
+    .from(schema.articles)
+    .where(and(...conditions))
+    .orderBy(desc(schema.articles.discoveredAt))
+    .limit(limit)
+  return rows as ArticleRow[]
+}
+
+export async function countArticlesSince(
+  entitySlug: string,
+  global: Filter,
+  column: Filter,
+  sinceIso: string,
+): Promise<number> {
+  const conditions = buildColumnConditions(entitySlug, global, column)
+  conditions.push(sql`${schema.articles.discoveredAt} > ${new Date(sinceIso)}`)
+  const rows = await db.select({ count: sql<number>`count(*)::int` })
+    .from(schema.articles)
+    .where(and(...conditions))
+  return rows[0]?.count ?? 0
 }
 
 export async function countColumnArticles(

@@ -136,7 +136,7 @@ export function DeckLayout(p: Props) {
       <div className="flex-shrink-0 border-b border-neutral-800 px-4 py-2.5">
         <FilterBar sources={p.sources} keywords={p.keywords} />
       </div>
-      <div className="flex-1 overflow-x-auto overflow-y-hidden">
+      <div className="flex-1 overflow-x-auto overflow-y-hidden scrollbar-auto">
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
           <SortableContext items={orderSlugs} strategy={horizontalListSortingStrategy}>
             <div className="h-full flex gap-3 p-3" style={{ scrollSnapType: 'x proximity' }}>
