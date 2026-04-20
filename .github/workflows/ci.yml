@@ -9,7 +9,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       DATABASE_URL: ${{ secrets.TEST_DATABASE_URL }}
-      ANTHROPIC_API_KEY: not-used-in-tests
+      OPENROUTER_API_KEY: not-used-in-tests
       ADMIN_COOKIE_SECRET: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
       ADMIN_PASSWORD: test
       CRON_SECRET: test-secret

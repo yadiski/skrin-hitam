@@ -4,7 +4,7 @@ import { join } from 'node:path'
 import { db, schema } from '@/lib/db/client'
 import { eq, sql } from 'drizzle-orm'
 
-const hasDb = Boolean(process.env.DATABASE_URL)
+const hasDb = Boolean(process.env.TEST_DATABASE_URL)
 const describeIfDb = hasDb ? describe : describe.skip
 
 const ARTICLE_HTML = readFileSync(join(__dirname, '../fixtures/html/simple-article.html'), 'utf8')

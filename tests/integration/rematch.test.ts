@@ -2,7 +2,7 @@ import { describe, test, expect, beforeEach } from 'vitest'
 import { db, schema } from '@/lib/db/client'
 import { sql, eq } from 'drizzle-orm'
 
-const hasDb = Boolean(process.env.DATABASE_URL)
+const hasDb = Boolean(process.env.TEST_DATABASE_URL)
 const describeIfDb = hasDb ? describe : describe.skip
 
 describeIfDb('runRematchAllArticles', () => {

@@ -7,7 +7,7 @@ Monitors Malaysian news outlets for coverage of Parti MUDA in general and figure
 1. `npm install`
 2. Copy `.env.example` to `.env` and fill in:
    - `DATABASE_URL` — Neon / Vercel Postgres URL
-   - `ANTHROPIC_API_KEY` — Claude API key
+   - `OPENROUTER_API_KEY` — OpenRouter API key (routes to Claude Haiku 4.5)
    - `ADMIN_PASSWORD` — admin page password
    - `ADMIN_COOKIE_SECRET` — 32-char random string (`openssl rand -hex 32`)
    - `CRON_SECRET` — random string; set as `CRON_SECRET` env var on Vercel
