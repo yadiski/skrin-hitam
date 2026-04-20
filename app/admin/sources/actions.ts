@@ -9,7 +9,12 @@ export async function updateSource(formData: FormData) {
   if (field === 'enabled') {
     await db.update(schema.sources).set({ enabled: formData.get('enabled') === 'on', updatedAt: new Date() }).where(eq(schema.sources.id, id))
   } else if (field === 'rssUrl') {
-    await db.update(schema.sources).set({ rssUrl: String(formData.get('rssUrl')), updatedAt: new Date() }).where(eq(schema.sources.id, id))
+    const raw = String(formData.get('rssUrl'))
+    try {
+      const parsed = new URL(raw)
+      if (!['http:', 'https:'].includes(parsed.protocol)) return
+    } catch { return }
+    await db.update(schema.sources).set({ rssUrl: raw, updatedAt: new Date() }).where(eq(schema.sources.id, id))
   }
   revalidatePath('/admin/sources')
 }

@@ -1,12 +1,19 @@
 import { NextResponse } from 'next/server'
+import { cookies } from 'next/headers'
 import { db, schema } from '@/lib/db/client'
 import { matchText, type MatcherEntity } from '@/lib/matcher'
 import { eq } from 'drizzle-orm'
+import { verifyToken, ADMIN_COOKIE_NAME } from '@/lib/auth'
 
 export const runtime = 'nodejs'
 export const maxDuration = 300
 
 export async function POST() {
+  const cookieStore = await cookies()
+  const token = cookieStore.get(ADMIN_COOKIE_NAME)?.value
+  if (!token || !(await verifyToken(token))) {
+    return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
+  }
   await runRematchAllArticles()
   return NextResponse.json({ ok: true })
 }

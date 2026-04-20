@@ -26,12 +26,16 @@ async function loadRobots(baseUrl: string) {
 }
 
 async function* sitemapUrls(baseUrl: string): AsyncGenerator<string> {
+  const baseOrigin = new URL(baseUrl).origin
   for (const path of ['/sitemap-news.xml', '/sitemap.xml']) {
     const xml = await fetchText(`${baseUrl.replace(/\/$/, '')}${path}`)
     if (!xml) continue
     const urls = [...xml.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => m[1].trim())
     for (const u of urls) {
       if (u.endsWith('.xml')) {
+        try {
+          if (new URL(u).origin !== baseOrigin) continue
+        } catch { continue }
         const sub = await fetchText(u)
         if (sub) for (const m of sub.matchAll(/<loc>([^<]+)<\/loc>/g)) yield m[1].trim()
       } else {

@@ -38,33 +38,39 @@ async function runPoll() {
 
   const limit = pLimit(4)
   const results = await Promise.all(sourcesDb.map((s) => limit(async () => {
-    const def = SOURCES.find((d) => d.id === s.id)
-    const rssUrl = def?.rssUrl ?? s.rssUrl
-    const feed = await fetchFeed(rssUrl)
-    if (feed.status !== 'ok') {
-      await recordCronRun({ kind: 'poll', sourceId: s.id, status: 'failed', errors: [{ stage: 'fetch', error: feed.status === 'error' ? feed.error : 'not_modified' }] })
+    try {
+      const def = SOURCES.find((d) => d.id === s.id)
+      const rssUrl = def?.rssUrl ?? s.rssUrl
+      const feed = await fetchFeed(rssUrl)
+      if (feed.status !== 'ok') {
+        await recordCronRun({ kind: 'poll', sourceId: s.id, status: 'failed', errors: [{ stage: 'fetch', error: feed.status === 'error' ? feed.error : 'not_modified' }] })
+        return { sourceId: s.id, inserted: 0 }
+      }
+
+      const candidates: NewArticleInput[] = []
+      for (const item of feed.items) {
+        const url = canonicalizeUrl(item.url)
+        if (!url) continue
+        const result = matchText(`${item.title}\n${item.snippet}`, matcherEntities)
+        if (result.scope.length === 0) continue
+        candidates.push({
+          sourceId: s.id, url, title: item.title,
+          publishedAt: item.publishedAt, snippet: item.snippet,
+          matchedEntities: [...result.scope, ...result.tag],
+          matchedKeywords: result.matchedKeywords,
+        })
+      }
+
+      const existing = await findExistingUrls(candidates.map((c) => c.url))
+      const fresh = candidates.filter((c) => !existing.has(c.url))
+      const inserted = await insertArticles(fresh)
+      await recordCronRun({ kind: 'poll', sourceId: s.id, status: 'ok', articlesDiscovered: inserted })
+      return { sourceId: s.id, inserted }
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e)
+      await recordCronRun({ kind: 'poll', sourceId: s.id, status: 'failed', errors: [{ stage: 'db', error: msg }] }).catch(() => {})
       return { sourceId: s.id, inserted: 0 }
     }
-
-    const candidates: NewArticleInput[] = []
-    for (const item of feed.items) {
-      const url = canonicalizeUrl(item.url)
-      if (!url) continue
-      const result = matchText(`${item.title}\n${item.snippet}`, matcherEntities)
-      if (result.scope.length === 0) continue
-      candidates.push({
-        sourceId: s.id, url, title: item.title,
-        publishedAt: item.publishedAt, snippet: item.snippet,
-        matchedEntities: [...result.scope, ...result.tag],
-        matchedKeywords: result.matchedKeywords,
-      })
-    }
-
-    const existing = await findExistingUrls(candidates.map((c) => c.url))
-    const fresh = candidates.filter((c) => !existing.has(c.url))
-    const inserted = await insertArticles(fresh)
-    await recordCronRun({ kind: 'poll', sourceId: s.id, status: 'ok', articlesDiscovered: inserted })
-    return { sourceId: s.id, inserted }
   })))
 
   await maybeAlertStaleSources()

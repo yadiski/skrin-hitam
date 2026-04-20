@@ -29,8 +29,11 @@ export type NewArticleInput = {
 
 export async function insertArticles(rows: NewArticleInput[]) {
   if (rows.length === 0) return 0
-  await db.insert(schema.articles).values(rows).onConflictDoNothing({ target: schema.articles.url })
-  return rows.length
+  const inserted = await db.insert(schema.articles)
+    .values(rows)
+    .onConflictDoNothing({ target: schema.articles.url })
+    .returning({ id: schema.articles.id })
+  return inserted.length
 }
 
 export async function recordCronRun(input: {

@@ -40,9 +40,9 @@ export async function verifyToken(token: string): Promise<string | null> {
 export function verifyPassword(provided: string): boolean {
   const expected = process.env.ADMIN_PASSWORD ?? ''
   if (!expected) return false
-  const a = Buffer.from(provided, 'utf8')
-  const b = Buffer.from(expected, 'utf8')
-  if (a.length !== b.length) return false
+  const key = Buffer.alloc(32, 0)
+  const a = createHmac('sha256', key).update(provided).digest()
+  const b = createHmac('sha256', key).update(expected).digest()
   return timingSafeEqual(a, b)
 }
 
