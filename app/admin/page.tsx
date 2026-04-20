@@ -1,6 +1,8 @@
 import { db } from '@/lib/db/client'
 import { sql } from 'drizzle-orm'
 
+export const dynamic = 'force-dynamic'
+
 export default async function AdminHome() {
   const articlesResult = await db.execute<{ count: number }>(sql`select count(*)::int as count from articles`)
   const pendingResult = await db.execute<{ count: number }>(sql`select count(*)::int as count from articles where enrichment_status = 'pending'`)

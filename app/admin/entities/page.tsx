@@ -2,6 +2,8 @@ import { db, schema } from '@/lib/db/client'
 import { asc } from 'drizzle-orm'
 import { saveEntity, deleteEntity, triggerRematch } from './actions'
 
+export const dynamic = 'force-dynamic'
+
 export default async function EntitiesPage() {
   const entities = await db.select().from(schema.trackedEntities).orderBy(asc(schema.trackedEntities.slug))
 

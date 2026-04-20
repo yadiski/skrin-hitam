@@ -2,6 +2,8 @@ import { db, schema } from '@/lib/db/client'
 import { asc, sql } from 'drizzle-orm'
 import { updateSource } from './actions'
 
+export const dynamic = 'force-dynamic'
+
 export default async function SourcesPage() {
   const sources = await db.select().from(schema.sources).orderBy(asc(schema.sources.id))
   const lastRunsResult = await db.execute<{ source_id: string; started_at: string; status: string; errors_count: number }>(sql`

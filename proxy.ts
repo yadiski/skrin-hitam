@@ -5,7 +5,7 @@ export const config = {
   matcher: ['/admin/:path*'],
 }
 
-export async function middleware(req: NextRequest) {
+export async function proxy(req: NextRequest) {
   if (req.nextUrl.pathname === '/admin/login') return NextResponse.next()
   const cookie = req.cookies.get(ADMIN_COOKIE_NAME)?.value
   if (!cookie) return NextResponse.redirect(new URL('/admin/login', req.url))
