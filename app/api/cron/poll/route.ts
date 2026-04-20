@@ -41,6 +41,7 @@ async function runPoll() {
     try {
       const def = SOURCES.find((d) => d.id === s.id)
       const rssUrl = def?.rssUrl ?? s.rssUrl
+      if (!rssUrl) return { sourceId: s.id, inserted: 0 }  // catch-all sources (e.g., 'other')
       const feed = await fetchFeed(rssUrl)
       if (feed.status !== 'ok') {
         await recordCronRun({ kind: 'poll', sourceId: s.id, status: 'failed', errors: [{ stage: 'fetch', error: feed.status === 'error' ? feed.error : 'not_modified' }] })
