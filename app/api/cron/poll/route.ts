@@ -9,6 +9,7 @@ import {
   findExistingUrls, insertArticles, recordCronRun,
   type NewArticleInput,
 } from '@/lib/db/queries'
+import { maybeAlertStaleSources } from '@/lib/alert'
 
 export const runtime = 'nodejs'
 export const maxDuration = 60
@@ -66,5 +67,6 @@ async function runPoll() {
     return { sourceId: s.id, inserted }
   })))
 
+  await maybeAlertStaleSources()
   return NextResponse.json({ ok: true, sources: results })
 }
