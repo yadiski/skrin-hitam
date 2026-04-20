@@ -1,6 +1,7 @@
 {
   "crons": [
-    { "path": "/api/cron/poll", "schedule": "*/15 * * * *" },
-    { "path": "/api/cron/enrich", "schedule": "*/5 * * * *" }
+    { "path": "/api/cron/wp-poll", "schedule": "* * * * *" },
+    { "path": "/api/cron/poll", "schedule": "*/2 * * * *" },
+    { "path": "/api/cron/enrich", "schedule": "*/2 * * * *" }
   ]
 }

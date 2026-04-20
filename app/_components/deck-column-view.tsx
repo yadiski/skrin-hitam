@@ -22,7 +22,8 @@ type Props = {
 }
 
 const PAGE_SIZE = 25
-const NEW_POLL_INTERVAL_MS = 45_000
+const NEW_POLL_FOCUSED_MS = 10_000
+const NEW_POLL_BLURRED_MS = 60_000
 
 function newestDiscoveredAt(rows: ArticleRow[]): string | null {
   if (rows.length === 0) return null
@@ -87,6 +88,15 @@ export function DeckColumnView(p: Props) {
   const pollEligible = p.sort === 'newest'
   const globalFilterKey = useMemo(() => JSON.stringify(p.globalFilter), [p.globalFilter])
   const columnFilterKey = useMemo(() => JSON.stringify(p.columnFilter), [p.columnFilter])
+  const [pollIntervalMs, setPollIntervalMs] = useState<number>(
+    typeof document !== 'undefined' && document.hidden ? NEW_POLL_BLURRED_MS : NEW_POLL_FOCUSED_MS
+  )
+
+  useEffect(() => {
+    const update = () => setPollIntervalMs(document.hidden ? NEW_POLL_BLURRED_MS : NEW_POLL_FOCUSED_MS)
+    document.addEventListener('visibilitychange', update)
+    return () => document.removeEventListener('visibilitychange', update)
+  }, [])
 
   useEffect(() => {
     if (!pollEligible || !anchorIso) return
@@ -98,9 +108,9 @@ export function DeckColumnView(p: Props) {
       } catch { /* transient network hiccup — try again next tick */ }
     }
     tick()
-    const id = setInterval(tick, NEW_POLL_INTERVAL_MS)
+    const id = setInterval(tick, pollIntervalMs)
     return () => { cancelled = true; clearInterval(id) }
-  }, [pollEligible, anchorIso, p.entity.slug, globalFilterKey, columnFilterKey, p.globalFilter, p.columnFilter])
+  }, [pollEligible, anchorIso, p.entity.slug, globalFilterKey, columnFilterKey, p.globalFilter, p.columnFilter, pollIntervalMs])
 
   const mergeNew = useCallback(async () => {
     if (!anchorIso || newCount === 0) return
